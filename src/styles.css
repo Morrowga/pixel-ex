@@ -1,0 +1,131 @@
+:root {
+  --bg0: #0d0f1f;
+  --bg1: #1d2243;
+  --ink: #f2f3fb;
+  --muted: #98a0c6;
+  --line: rgba(255, 255, 255, 0.14);
+  --brand: #a4aeff;
+  --ok: #7ee8a8;
+  --hint: #ffd166;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  color: var(--ink);
+  background: radial-gradient(ellipse at 50% 35%, var(--bg1) 0%, var(--bg0) 75%) fixed;
+  font: 16px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  overflow: hidden;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+button:disabled { cursor: default; opacity: 0.35; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+
+/* ---------- ask + loading: one thing in the middle ---------- */
+.center { min-height: 100%; display: grid; place-content: center; justify-items: center; gap: 22px; padding: 24px; text-align: center; }
+.ask { width: min(640px, 92vw); display: grid; gap: 16px; }
+.pill {
+  display: flex; align-items: center; gap: 8px;
+  background: rgba(255, 255, 255, 0.07); border: 1px solid var(--line); border-radius: 999px;
+  padding: 6px 6px 6px 22px; transition: border-color 0.3s, background 0.3s, box-shadow 0.3s;
+}
+.pill:focus-within { border-color: var(--brand); background: rgba(255, 255, 255, 0.1); box-shadow: 0 0 0 4px rgba(164, 174, 255, 0.15); }
+.pill input { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--ink); font: inherit; font-size: 1.05rem; padding: 10px 0; }
+.pill input::placeholder { color: var(--muted); }
+.pill.big { padding: 8px 8px 8px 26px; }
+.pill.big input { font-size: 1.25rem; }
+.pill button { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--brand); color: #0d0f1f; }
+.notice { margin: 0; color: var(--hint); }
+.choices { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.choices button { background: rgba(255, 255, 255, 0.07); border: 1px solid var(--line); border-radius: 999px; padding: 8px 18px; transition: background 0.3s; }
+.choices button:hover { background: rgba(255, 255, 255, 0.15); }
+
+.loading-text { margin: 0; font-size: 1.15rem; color: var(--ink); min-height: 1.6em; }
+.bar { position: relative; width: 220px; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar span { position: absolute; inset: 0 auto 0 0; width: 38%; border-radius: 3px; background: var(--brand); }
+
+/* ---------- the board: four zones, each with a fixed size ---------- */
+:root { --caption-h: clamp(104px, 16vh, 156px); --dock-h: 44px; }
+.board {
+  position: fixed; inset: 0; height: 100dvh; overflow: hidden;
+  display: grid; grid-template-rows: var(--caption-h) auto minmax(0, 1fr) var(--dock-h);
+  padding: 12px 20px 8px; gap: 4px;
+}
+.newq { position: absolute; top: 12px; left: 14px; z-index: 2; display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; color: var(--muted); font-size: 0.85rem; padding: 6px 8px; border-radius: 8px; }
+.newq:hover { color: var(--ink); }
+
+/* Zone 1: the words. Lines stack in the same box, so a changing line never changes the layout. */
+.caption-zone { position: relative; overflow: hidden; }
+.caption-slot { position: absolute; inset: 0; display: grid; align-content: start; justify-items: center; text-align: center; padding: 16px 56px 0; gap: 4px; }
+.caption { margin: 0 auto; max-width: 1000px; font-size: clamp(1.25rem, min(3vw, 4.4vh), 2.35rem); line-height: 1.25; font-weight: 500; text-wrap: balance; text-shadow: 0 2px 18px rgba(0, 0, 0, 0.5); }
+.caption strong { font-weight: 800; color: color-mix(in srgb, var(--accent, var(--brand)) 62%, white); }
+.think { margin: 0 auto; max-width: 760px; color: var(--muted); font-size: clamp(0.95rem, min(1.6vw, 2.4vh), 1.2rem); font-style: italic; text-wrap: balance; }
+
+/* Zone 2: the answer. Its height is chosen once per lesson. */
+.answer-zone { position: relative; z-index: 2; display: grid; justify-items: center; align-content: start; overflow: visible; }
+.answer-zone.none { height: 0; }
+.answer-zone.input { height: 116px; }
+.answer-zone.choice-few { height: 132px; }
+.answer-zone.choice-many { height: 200px; }
+@media (max-width: 760px) { .answer-zone { transition: height 0.5s ease; } .answer-zone.choice-few { height: 236px; } .answer-zone.choice-many { height: 310px; } .answer-zone.idle.idle { height: 0; } }
+
+/* Zone 3: the picture. Takes whatever is left, always the same size. */
+.stagewrap { min-height: 0; min-width: 0; display: grid; place-items: stretch; overflow: hidden; }
+.stagebox { width: 100%; height: 100%; max-width: 1500px; margin: 0 auto; min-height: 0; color: var(--ink); }
+.fillbox { width: 100%; height: 100%; min-height: 0; }
+.stage { width: 100%; height: 100%; display: block; overflow: visible; }
+.basket { fill: rgba(164, 174, 255, 0.08); stroke: var(--brand); stroke-width: 2; stroke-dasharray: 6 5; }
+.halo { paint-order: stroke; stroke: #14172e; stroke-width: 4px; stroke-linejoin: round; }
+
+/* Zone 4: the controls. */
+.dock { display: grid; justify-items: center; align-items: center; height: var(--dock-h); }
+.controls { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px 3px 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
+.controls button { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; border: 0; background: none; color: var(--muted); transition: color 0.2s, background 0.2s; }
+.controls button:hover:not(:disabled) { color: var(--ink); background: rgba(255, 255, 255, 0.1); }
+.controls .main { color: var(--ink); background: rgba(255, 255, 255, 0.12); }
+.ticks { display: flex; gap: 4px; margin-left: 8px; }
+.tick { width: 14px; height: 3px; border-radius: 3px; background: var(--line); transition: background 0.4s; }
+.tick.done { background: var(--muted); }
+.tick.on { background: var(--brand); }
+
+.answer { width: min(1100px, 94vw); height: 100%; display: grid; grid-template-rows: 1fr auto; gap: 6px; justify-items: center; align-content: start; }
+.options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); grid-auto-rows: 1fr; gap: 8px; width: 100%; align-content: start; }
+.options button { display: flex; gap: 10px; align-items: baseline; text-align: left; background: rgba(255, 255, 255, 0.07); border: 1px solid var(--line); border-radius: 12px; padding: 8px 14px; font-size: 0.95rem; line-height: 1.3; transition: background 0.3s; }
+.options button:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); }
+.options b { color: var(--brand); }
+.feedback-slot { min-height: 58px; display: grid; place-items: start center; width: 100%; }
+.feedback { margin: 0; padding: 6px 14px; border-radius: 12px; font-size: 0.92rem; text-align: center; max-width: 100%; }
+.feedback.correct { background: rgba(126, 232, 168, 0.15); color: var(--ok); }
+.feedback.hint, .feedback.invalid { background: rgba(255, 209, 102, 0.13); color: var(--hint); }
+.tag { display: inline-block; margin-right: 8px; padding: 0 8px; border-radius: 6px; border: 1px solid currentColor; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+
+@media (max-width: 640px) {
+  :root { --caption-h: clamp(140px, 20vh, 190px); }
+  .caption-slot { padding: 70px 10px 0; }
+  .board { padding: 8px 10px 8px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto; } }
+
+/* ---------- languages ---------- */
+.langs { position: fixed; top: 16px; right: 18px; z-index: 5; display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
+.langs button { background: none; border: 0; color: var(--muted); font-size: 0.85rem; padding: 5px 12px; border-radius: 999px; transition: color 0.2s, background 0.2s; }
+.langs button:hover { color: var(--ink); }
+.langs button.on { color: var(--ink); background: rgba(255, 255, 255, 0.14); }
+
+/* Each script gets a font that has its letters, and line breaking that suits it. */
+html[lang='ja'] body { font-family: system-ui, -apple-system, 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', 'Yu Gothic', Meiryo, sans-serif; }
+html[lang='my'] body { font-family: system-ui, -apple-system, 'Noto Sans Myanmar', 'Myanmar Sangam MN', 'Myanmar Text', Padauk, sans-serif; }
+/* Japanese has no spaces between words: break anywhere that is allowed, and keep punctuation off the line start. */
+html[lang='ja'] .caption, html[lang='ja'] .think, html[lang='ja'] .feedback, html[lang='ja'] .options button { line-break: strict; word-break: normal; overflow-wrap: anywhere; }
+/* Burmese letters are tall and stack marks above and below, so they need more line height and a little less size. */
+html[lang='my'] .caption { font-size: clamp(1.15rem, min(2.7vw, 4vh), 2.1rem); line-height: 1.55; overflow-wrap: anywhere; }
+html[lang='my'] .think, html[lang='my'] .feedback, html[lang='my'] .options button, html[lang='my'] .notice, html[lang='my'] .loading-text { line-height: 1.6; overflow-wrap: anywhere; }
+
+/* ---------- the runner above the question box ---------- */
+.greeting { display: flex; align-items: center; justify-content: center; gap: 4px; flex-wrap: wrap; margin-bottom: -4px; }
+.runner { width: 132px; height: 130px; flex: none; color: var(--muted); }
+.greeting-text { margin: 0; max-width: 340px; text-align: left; font-size: clamp(1.15rem, 2.3vw, 1.5rem); line-height: 1.35; font-weight: 500; text-wrap: balance; }
+html[lang='my'] .greeting-text { line-height: 1.6; overflow-wrap: anywhere; }
+html[lang='ja'] .greeting-text { line-break: strict; overflow-wrap: anywhere; }
+@media (max-width: 560px) { .greeting { flex-direction: column; } .greeting-text { text-align: center; } }
