@@ -7,6 +7,7 @@ import { normalizeDigits, visualLength } from '../i18n/lang'
 import { compileExpr, linearEquation } from './mathx'
 import { COLORS, type Block, type Plan, type Verify } from './plan'
 import { frac, fracEq, fracValue, type Frac } from './calc'
+import { planReveal } from './reveal'
 
 const HEX: Record<(typeof COLORS)[number], string> = {
   blue: '#2563eb',
@@ -126,8 +127,14 @@ function layoutScene(groups: Group[]): Scene {
   return { items, baskets, size }
 }
 
-/** Slow and calm: time to read the line and watch the picture. */
-const duration = (caption: string) => Math.min(10000, 4200 + caption.length * 80)
+/** Time to read the line, but never less than the picture needs to finish appearing, plus a short pause. */
+const duration = (caption: string, revealSeconds = 0) => Math.min(8000, Math.max(2600 + caption.length * 65, revealSeconds * 1000 + 1200))
+
+/** How long a step's new pictures and arrows take to play, given the step before it. */
+function revealSeconds(prev: Visual | undefined, cur: Visual | undefined): number {
+  if (cur?.kind !== 'scene') return 0
+  return planReveal(prev?.kind === 'scene' ? prev : null, cur).total
+}
 
 /**
  * Plays the blocks forward into scenes, and checks the plan is internally
@@ -432,7 +439,7 @@ export function buildSteps(
       chunk: ci,
       caption: b.caption,
       accent,
-      durationMs: ask ? 0 : duration(b.caption),
+      durationMs: ask ? 0 : duration(b.caption, revealSeconds(steps[steps.length - 1]?.visual, visual ?? lastVisual)),
       scene: layoutScene(all()),
       visual: visual ?? lastVisual,
       think: b.think?.trim() || undefined,
