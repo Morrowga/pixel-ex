@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { stream } from 'hono/streaming'
 import { checkAnswer, makeLesson, readToken } from './lesson'
 import { log } from './log'
+import { overBudget } from './budget'
 import { normalizeLang } from '../src/i18n/lang'
 import { t } from '../src/i18n/messages'
 
@@ -16,6 +17,11 @@ app.post('/api/lesson', async (c) => {
   const question = typeof body?.question === 'string' ? body.question.trim() : ''
   if (!question) return c.json({ error: t(lang, 'err.askFirst') }, 400)
   if (question.length > 500) return c.json({ error: t(lang, 'err.tooLong') }, 400)
+
+  if (await overBudget()) {
+    log('  ✖ token budget for the whole site is used up; not starting a lesson')
+    return c.json({ error: t(lang, 'err.budget') }, 503)
+  }
 
   // The browser asks for a stream so the loading screen can show real progress.
   if (c.req.header('accept')?.includes('application/x-ndjson')) {

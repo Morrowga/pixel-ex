@@ -49240,7 +49240,11 @@ function layoutScene(groups) {
   });
   return { items, baskets, size };
 }
-var duration = (caption) => Math.min(1e4, 4200 + caption.length * 80);
+var duration = (caption, revealSeconds2 = 0) => Math.min(8e3, Math.max(2600 + caption.length * 65, revealSeconds2 * 1e3 + 1200));
+function revealSeconds(prev, cur) {
+  if (cur?.kind !== "scene") return 0;
+  return planReveal(prev?.kind === "scene" ? prev : null, cur).total;
+}
 function buildSteps(plan2, opts) {
   plan2 = { ...plan2, chunks: plan2.chunks.map((c) => ({ ...c, blocks: c.blocks.map(repairScene) })) };
   const strict = !opts.lenient;
@@ -49516,7 +49520,7 @@ function buildSteps(plan2, opts) {
       chunk: ci,
       caption: b.caption,
       accent,
-      durationMs: ask ? 0 : duration(b.caption),
+      durationMs: ask ? 0 : duration(b.caption, revealSeconds(steps[steps.length - 1]?.visual, visual ?? lastVisual)),
       scene: layoutScene(all2()),
       visual: visual ?? lastVisual,
       think: b.think?.trim() || void 0,
@@ -49592,6 +49596,7 @@ var en = {
   "net.unreachable": "Could not reach the server. Is it running?",
   "err.askFirst": "Type a question first.",
   "err.tooLong": "That question is too long. Keep it short.",
+  "err.budget": "The free test has reached its limit, so no new questions can be answered right now. Thank you for trying it.",
   "err.wentWrong": "Something went wrong reading your question. Try again.",
   "err.expired": "This lesson expired. Ask the question again.",
   "err.cantBuild": "I could not build a reliable explanation for that one. Try rewording it.",
@@ -49656,6 +49661,7 @@ var ja = {
   "net.unreachable": "\u30B5\u30FC\u30D0\u30FC\u306B\u3064\u306A\u304C\u308A\u307E\u305B\u3093\u3002\u8D77\u52D5\u3057\u3066\u3044\u307E\u3059\u304B\uFF1F",
   "err.askFirst": "\u307E\u305A\u8CEA\u554F\u3092\u5165\u529B\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
   "err.tooLong": "\u8CEA\u554F\u304C\u9577\u3059\u304E\u307E\u3059\u3002\u77ED\u304F\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
+  "err.budget": "\u7121\u6599\u30C6\u30B9\u30C8\u306E\u4E0A\u9650\u306B\u9054\u3057\u305F\u305F\u3081\u3001\u4ECA\u306F\u65B0\u3057\u3044\u8CEA\u554F\u306B\u7B54\u3048\u3089\u308C\u307E\u305B\u3093\u3002\u304A\u8A66\u3057\u3044\u305F\u3060\u304D\u3042\u308A\u304C\u3068\u3046\u3054\u3056\u3044\u307E\u3057\u305F\u3002",
   "err.wentWrong": "\u8CEA\u554F\u3092\u8AAD\u3080\u3068\u304D\u306B\u554F\u984C\u304C\u8D77\u304D\u307E\u3057\u305F\u3002\u3082\u3046\u4E00\u5EA6\u304A\u8A66\u3057\u304F\u3060\u3055\u3044\u3002",
   "err.expired": "\u3053\u306E\u30EC\u30C3\u30B9\u30F3\u306F\u671F\u9650\u5207\u308C\u3067\u3059\u3002\u3082\u3046\u4E00\u5EA6\u8CEA\u554F\u3057\u3066\u304F\u3060\u3055\u3044\u3002",
   "err.cantBuild": "\u305D\u306E\u8CEA\u554F\u306B\u306F\u4FE1\u983C\u3067\u304D\u308B\u8AAC\u660E\u3092\u4F5C\u308C\u307E\u305B\u3093\u3067\u3057\u305F\u3002\u8A00\u3044\u65B9\u3092\u5909\u3048\u3066\u307F\u3066\u304F\u3060\u3055\u3044\u3002",
@@ -49719,6 +49725,7 @@ var my = {
   "net.unreachable": "\u1006\u102C\u1017\u102C\u1014\u1032\u1037 \u1001\u103B\u102D\u1010\u103A\u1006\u1000\u103A\u101C\u102D\u102F\u1037 \u1019\u101B\u1015\u102B\u104B \u1016\u103D\u1004\u1037\u103A\u1011\u102C\u1038\u1015\u102B\u101E\u101C\u102C\u1038\u104B",
   "err.askFirst": "\u1019\u1031\u1038\u1001\u103D\u1014\u103A\u1038\u1000\u102D\u102F \u1021\u101B\u1004\u103A \u101B\u102D\u102F\u1000\u103A\u1011\u100A\u1037\u103A\u1015\u102B\u104B",
   "err.tooLong": "\u1019\u1031\u1038\u1001\u103D\u1014\u103A\u1038 \u1021\u101B\u1019\u103A\u1038\u101B\u103E\u100A\u103A\u1014\u1031\u1015\u102B\u1010\u101A\u103A\u104B \u1010\u102D\u102F\u1010\u102D\u102F\u101B\u1031\u1038\u1015\u102B\u104B",
+  "err.budget": "\u1021\u1001\u1019\u1032\u1037\u1005\u1019\u103A\u1038\u101E\u1015\u103A\u1019\u103E\u102F \u1000\u1014\u1037\u103A\u101E\u1010\u103A\u1001\u103B\u1000\u103A \u1015\u103C\u100A\u1037\u103A\u101E\u103D\u102C\u1038\u1015\u103C\u102E\u1019\u102D\u102F\u1037 \u1021\u1001\u102F \u1019\u1031\u1038\u1001\u103D\u1014\u103A\u1038\u1021\u101E\u1005\u103A \u1019\u1016\u103C\u1031\u1014\u102D\u102F\u1004\u103A\u1010\u1031\u102C\u1037\u1015\u102B\u104B \u1005\u1019\u103A\u1038\u1000\u103C\u100A\u1037\u103A\u1015\u1031\u1038\u1010\u1032\u1037\u1021\u1010\u103D\u1000\u103A \u1000\u103B\u1031\u1038\u1007\u1030\u1038\u1010\u1004\u103A\u1015\u102B\u1010\u101A\u103A\u104B",
   "err.wentWrong": "\u101E\u1004\u1037\u103A\u1019\u1031\u1038\u1001\u103D\u1014\u103A\u1038\u1000\u102D\u102F \u1016\u1010\u103A\u101B\u102C\u1019\u103E\u102C \u1021\u1019\u103E\u102C\u1038\u1016\u103C\u1005\u103A\u101E\u103D\u102C\u1038\u1015\u102B\u1010\u101A\u103A\u104B \u1011\u1015\u103A\u1000\u103C\u102D\u102F\u1038\u1005\u102C\u1038\u1015\u102B\u104B",
   "err.expired": "\u1012\u102E\u101E\u1004\u103A\u1001\u1014\u103A\u1038\u1005\u102C \u101E\u1000\u103A\u1010\u1019\u103A\u1038\u1000\u102F\u1014\u103A\u101E\u103D\u102C\u1038\u1015\u102B\u1015\u103C\u102E\u104B \u1019\u1031\u1038\u1001\u103D\u1014\u103A\u1038\u1000\u102D\u102F \u1011\u1015\u103A\u1019\u1031\u1038\u1015\u102B\u104B",
   "err.cantBuild": "\u1012\u102E\u1019\u1031\u1038\u1001\u103D\u1014\u103A\u1038\u1021\u1010\u103D\u1000\u103A \u1005\u102D\u1010\u103A\u1001\u103B\u101B\u1010\u1032\u1037 \u101B\u103E\u1004\u103A\u1038\u1015\u103C\u1001\u103B\u1000\u103A \u1019\u1016\u1014\u103A\u1010\u102E\u1038\u1014\u102D\u102F\u1004\u103A\u1001\u1032\u1037\u1015\u102B\u104B \u1005\u1000\u102C\u1038\u101C\u102F\u1036\u1038\u1015\u103C\u1031\u102C\u1004\u103A\u1038\u1015\u103C\u102E\u1038 \u1011\u1015\u103A\u1019\u1031\u1038\u1000\u103C\u100A\u1037\u103A\u1015\u102B\u104B",
@@ -63228,13 +63235,13 @@ var TurnState = class {
     if (event.type !== "agent.session.turn.item.added" || event.item.type !== "function_call") {
       return;
     }
-    const call = event.item;
-    const key2 = JSON.stringify([call.turn_id, call.call_id]);
+    const call2 = event.item;
+    const key2 = JSON.stringify([call2.turn_id, call2.call_id]);
     if (__classPrivateFieldGet(this, _TurnState_calls, "f").has(key2)) {
       return;
     }
     __classPrivateFieldGet(this, _TurnState_calls, "f").add(key2);
-    return call;
+    return call2;
   }
 };
 _TurnState_turnID = /* @__PURE__ */ new WeakMap(), _TurnState_turnEnded = /* @__PURE__ */ new WeakMap(), _TurnState_eventIDs = /* @__PURE__ */ new WeakMap(), _TurnState_calls = /* @__PURE__ */ new WeakMap();
@@ -63280,7 +63287,7 @@ function normalizedOutput(value) {
   }
   throw new OpenAIError("Tool output must be text, content, a JSON object, or null");
 }
-function toolResult(call, value) {
+function toolResult(call2, value) {
   const output2 = isObj(value) ? JSON.stringify(value) : value;
   const serialized = JSON.stringify(output2);
   if (serialized === void 0) {
@@ -63288,8 +63295,8 @@ function toolResult(call, value) {
   }
   return {
     type: "agent.session.input.tool_result",
-    turn_id: call.turn_id,
-    call_id: call.call_id,
+    turn_id: call2.turn_id,
+    call_id: call2.call_id,
     success: true,
     output: normalizedOutput(typeof output2 === "string" ? output2 : JSON.parse(serialized))
   };
@@ -63316,15 +63323,15 @@ var AgentToolDispatcher = class {
     return typeof __classPrivateFieldGet(this, _AgentToolDispatcher_handlers, "f").get(name323) === "function";
   }
   /** Capture routing and arguments before the caller can mutate the yielded event. */
-  prepare(call, sessionID) {
-    const handler = call && __classPrivateFieldGet(this, _AgentToolDispatcher_handlers, "f").get(call.name);
-    if (!call || typeof handler !== "function") {
+  prepare(call2, sessionID) {
+    const handler = call2 && __classPrivateFieldGet(this, _AgentToolDispatcher_handlers, "f").get(call2.name);
+    if (!call2 || typeof handler !== "function") {
       return;
     }
     if (!sessionID) {
       throw new OpenAIError("Tool call received before the session creation event");
     }
-    const snapshot = structuredClone(call);
+    const snapshot = structuredClone(call2);
     return async () => {
       __classPrivateFieldGet(this, _AgentToolDispatcher_instances, "m", _AgentToolDispatcher_checkAbort).call(this);
       const result = await __classPrivateFieldGet(this, _AgentToolDispatcher_instances, "m", _AgentToolDispatcher_result).call(this, snapshot, handler, sessionID);
@@ -63333,10 +63340,10 @@ var AgentToolDispatcher = class {
     };
   }
 };
-_AgentToolDispatcher_handlers = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_options = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_sessions = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_controller = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_onToolError = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_instances = /* @__PURE__ */ new WeakSet(), _AgentToolDispatcher_result = async function _AgentToolDispatcher_result2(call, handler, sessionID) {
+_AgentToolDispatcher_handlers = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_options = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_sessions = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_controller = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_onToolError = /* @__PURE__ */ new WeakMap(), _AgentToolDispatcher_instances = /* @__PURE__ */ new WeakSet(), _AgentToolDispatcher_result = async function _AgentToolDispatcher_result2(call2, handler, sessionID) {
   let stage = "arguments";
   try {
-    const args = typeof call.arguments === "string" ? JSON.parse(call.arguments) : call.arguments;
+    const args = typeof call2.arguments === "string" ? JSON.parse(call2.arguments) : call2.arguments;
     if (!isObj(args)) {
       throw new OpenAIError("Function arguments must be a JSON object");
     }
@@ -63346,17 +63353,17 @@ _AgentToolDispatcher_handlers = /* @__PURE__ */ new WeakMap(), _AgentToolDispatc
       stage = value;
     }) : handler(arguments_));
     stage = "output";
-    return toolResult(call, output2);
+    return toolResult(call2, output2);
   } catch (error62) {
     __classPrivateFieldGet(this, _AgentToolDispatcher_instances, "m", _AgentToolDispatcher_checkAbort).call(this);
     if (__classPrivateFieldGet(this, _AgentToolDispatcher_onToolError, "f")) {
       const failure2 = Object.freeze({
         error: error62,
         stage,
-        tool_name: call.name,
+        tool_name: call2.name,
         session_id: sessionID,
-        turn_id: call.turn_id,
-        call_id: call.call_id
+        turn_id: call2.turn_id,
+        call_id: call2.call_id
       });
       try {
         await __classPrivateFieldGet(this, _AgentToolDispatcher_instances, "m", _AgentToolDispatcher_wait).call(this, () => __classPrivateFieldGet(this, _AgentToolDispatcher_onToolError, "f")?.call(this, failure2));
@@ -63366,8 +63373,8 @@ _AgentToolDispatcher_handlers = /* @__PURE__ */ new WeakMap(), _AgentToolDispatc
     }
     return {
       type: "agent.session.input.tool_result",
-      turn_id: call.turn_id,
-      call_id: call.call_id,
+      turn_id: call2.turn_id,
+      call_id: call2.call_id,
       success: false,
       error: "Tool handler failed."
     };
@@ -100863,6 +100870,46 @@ Write EVERY word the learner will read in simple, everyday, spoken-style Burmese
 
 // server/usage.ts
 import { AsyncLocalStorage } from "node:async_hooks";
+
+// server/budget.ts
+var KEY = "qe:tokens";
+var memory = 0;
+var budgetLimit = () => {
+  const v = process.env.TOKEN_BUDGET;
+  if (v !== void 0 && v !== "" && Number.isFinite(Number(v))) return Number(v);
+  return process.env.VERCEL ? 5e5 : Infinity;
+};
+var remote = () => {
+  const url2 = process.env.KV_REST_API_URL ?? process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.KV_REST_API_TOKEN ?? process.env.UPSTASH_REDIS_REST_TOKEN;
+  return url2 && token ? { url: url2.replace(/\/$/, ""), token } : null;
+};
+async function call(path2) {
+  const r = remote();
+  if (!r) return null;
+  try {
+    const res = await fetch(`${r.url}/${path2}`, { headers: { Authorization: `Bearer ${r.token}` } });
+    const body = await res.json();
+    return Number(body.result ?? 0);
+  } catch (e2) {
+    log3(`  \u26A0 token budget store unreachable (${e2 instanceof Error ? e2.message : e2}); using this server's own count`);
+    return null;
+  }
+}
+async function tokensUsed() {
+  return await call(`get/${KEY}`) ?? memory;
+}
+async function overBudget() {
+  const limit2 = budgetLimit();
+  return limit2 !== Infinity && await tokensUsed() >= limit2;
+}
+async function addTokens(n3) {
+  if (!(n3 > 0)) return;
+  memory += n3;
+  await call(`incrby/${KEY}/${Math.round(n3)}`);
+}
+
+// server/usage.ts
 var store = new AsyncLocalStorage();
 function prices() {
   const num2 = (v, d) => v !== void 0 && v !== "" && Number.isFinite(Number(v)) ? Number(v) : d;
@@ -100881,6 +100928,7 @@ var usd = (x) => `$${x.toFixed(x < 0.1 ? 5 : 4)}`;
 var session = { questions: 0, cost: 0 };
 function recordUsage(kind, usage) {
   if (!usage) return;
+  void addTokens((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0));
   store.getStore()?.push({
     kind,
     input: usage.prompt_tokens ?? 0,
@@ -101277,6 +101325,10 @@ app.post("/api/lesson", async (c) => {
   const question = typeof body?.question === "string" ? body.question.trim() : "";
   if (!question) return c.json({ error: t(lang, "err.askFirst") }, 400);
   if (question.length > 500) return c.json({ error: t(lang, "err.tooLong") }, 400);
+  if (await overBudget()) {
+    log3("  \u2716 token budget for the whole site is used up; not starting a lesson");
+    return c.json({ error: t(lang, "err.budget") }, 503);
+  }
   if (c.req.header("accept")?.includes("application/x-ndjson")) {
     c.header("Content-Type", "application/x-ndjson");
     c.header("Cache-Control", "no-cache");

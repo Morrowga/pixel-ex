@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 import { log } from './log'
+import { addTokens } from './budget'
 
 export interface CallUsage {
   kind: string
@@ -50,6 +51,7 @@ export function recordUsage(
   },
 ) {
   if (!usage) return
+  void addTokens((usage.prompt_tokens ?? 0) + (usage.completion_tokens ?? 0))
   store.getStore()?.push({
     kind,
     input: usage.prompt_tokens ?? 0,

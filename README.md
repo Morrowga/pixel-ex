@@ -51,6 +51,10 @@ npm run build            # also bundles the API for Vercel into api/_app.js
 
 On Vercel, set `OPENAI_API_KEY` and `LESSON_SECRET` as environment variables.
 
+## Test budget
+
+The whole site shares one token budget (`TOKEN_BUDGET`, default 500,000 on Vercel, no limit locally). When it is used up, new questions get a polite "test limit reached" message. To make the count exact across Vercel's servers, connect an Upstash Redis from Vercel Storage (it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`). Without it, each server copy counts on its own and resets when it restarts.
+
 ## Cost
 
 A typical lesson costs a few tenths of a cent to about a cent, depending on retries and new sprites. Each question's cost is printed in the terminal.
