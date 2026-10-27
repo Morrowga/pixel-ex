@@ -166,6 +166,19 @@ describe('arrows tell a complete, clear story', () => {
     const v = steps(plan)[0].visual as { arrows: { from: string; to: string; label: string }[] }
     expect(v.arrows).toEqual([{ from: 'c', to: 'm', label: 'sends' }])
   })
+  it('an arrow to a picture that is not in the scene, or to itself, is dropped instead of rejected', () => {
+    const plan = scene([block({ type: 'scene', caption: 'x', actors: [a('cook'), a('recipe'), a('food')], arrows: [
+      { from: 'recipe', to: 'cook', label: 'tells' }, { from: 'cook', to: 'oven', label: 'uses' }, { from: 'food', to: 'food', label: 'is' }, { from: 'cook', to: 'food', label: 'makes' },
+    ] })])
+    const v = steps(plan)[0].visual as { arrows: { from: string; to: string }[] }
+    expect(v.arrows.map((r) => `${r.from}>${r.to}`)).toEqual(['recipe>cook', 'cook>food'])
+  })
+  it('more than 6 arrows are cut to the first 6', () => {
+    const ids = ['a', 'b', 'c', 'd', 'e', 'f']
+    const arrows = ids.flatMap((x, i) => ids.slice(i + 1).map((y) => ({ from: x, to: y, label: 'sends' })))
+    const plan = scene([block({ type: 'scene', caption: 'x', actors: ids.map((i) => a(i)), arrows })])
+    expect(errorsOf(plan)).not.toMatch(/arrows must go between/)
+  })
   it('a connected story passes', () => {
     expect(bad([a('cook'), a('recipe'), a('food')], [{ from: 'recipe', to: 'cook', label: 'tells' }, { from: 'cook', to: 'food', label: 'makes' }])).not.toMatch(/has no arrow|short verb|ONE arrow/)
   })
@@ -220,9 +233,7 @@ describe('the last try is relaxed, real mistakes are not', () => {
     const r = build(messy, true)
     expect('steps' in r).toBe(true)
   })
-  it('relaxed still rejects real mistakes: an unknown arrow target, a leaked answer, a wrong picture reading', () => {
-    const broken = sc([block({ type: 'scene', caption: 'x', actors: [a('p'), a('q')], arrows: [{ from: 'p', to: 'zzz', label: 'sends' }] })])
-    expect(JSON.stringify(build(broken, true))).toMatch(/arrows must go between/)
+  it('relaxed still rejects real mistakes: a leaked answer, a wrong picture reading', () => {
     const leaky = { ...applesPlan, chunks: [{ title: 'x', blocks: [...applesPlan.chunks[0].blocks.slice(0, 3), block({ type: 'ask', caption: 'You have **7** apples, right?', group: 'all', measure: 'group_total' })] }] }
     expect(JSON.stringify(build(leaky, true))).toMatch(/gives away the answer/)
   })
@@ -296,7 +307,8 @@ describe('animated scenes', () => {
     expect(bad([block({ type: 'scene', caption: 'x', actors: [] })])).toMatch(/1 to 6 actors/)
     expect(bad([block({ type: 'scene', caption: 'x', actors: [a('p'), a('p')] })])).toMatch(/unique/)
     expect(bad([block({ type: 'scene', caption: 'x', actors: [a('p', { x: 140 })] })])).toMatch(/between 0 and 100/)
-    expect(bad([block({ type: 'scene', caption: 'x', actors: [a('p'), a('q')], arrows: [{ from: 'p', to: 'zzz', label: '' }] })])).toMatch(/arrows must go between/)
+    // an arrow to a picture that is not in the scene is dropped in code, so it is not an error
+    expect(bad([block({ type: 'scene', caption: 'x', actors: [a('p'), a('q')], arrows: [{ from: 'p', to: 'zzz', label: '' }] })])).not.toMatch(/arrows must go between/)
     expect(bad([block({ type: 'scene', caption: 'x', actors: [a('p', { sprite: '   ' })] })])).toMatch(/sprite name/)
     expect(bad([block({ type: 'scene', caption: 'x', actors: [a('p', { label: 'many helpers' })] })])).toMatch(/Draw 3 separate actors/)
     expect(bad([block({ type: 'scene', caption: 'x', actors: [a('p', { label: 'Several pieces' })] })])).toMatch(/Draw 3 separate actors/)

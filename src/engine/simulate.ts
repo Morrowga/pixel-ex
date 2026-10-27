@@ -33,15 +33,20 @@ const VAGUE = new Set(['use', 'uses', 'used', 'used now', 'support', 'supports',
 /**
  * Fixes small, certain inconsistencies in code instead of paying for another AI call:
  * - a label that names a sprite we have ("desk", "paper") gets that sprite;
- * - when the caption says "child" but the picture is labelled "worker", the caption's word wins.
+ * - when the caption says "child" but the picture is labelled "worker", the caption's word wins;
+ * - an arrow to a picture that is not in the scene, or to itself, is dropped.
  */
 export function repairScene(b: Block): Block {
   if (b.type !== 'scene') return b
   const cap = words(b.caption)
   return {
     ...b,
-    // Only one arrow between two pictures: the first one stays, a second one (even the other way round) is dropped.
-    arrows: b.arrows.filter((r, i) => b.arrows.findIndex((q) => (q.from === r.from && q.to === r.to) || (q.from === r.to && q.to === r.from)) === i),
+    // An arrow needs two different pictures that are in this scene (the AI sometimes points at one it did not list here),
+    // there is only one arrow between two pictures (a second one, even the other way round, is dropped), and at most 6.
+    arrows: b.arrows
+      .filter((r) => r.from !== r.to && b.actors.some((a) => a.id === r.from) && b.actors.some((a) => a.id === r.to))
+      .filter((r, i, all) => all.findIndex((q) => (q.from === r.from && q.to === r.to) || (q.from === r.to && q.to === r.from)) === i)
+      .slice(0, 6),
     actors: b.actors.map((a) => {
       const l = slug(a.label)
       if (a.label.trim() && l in SPRITES && l !== slug(a.sprite)) return { ...a, sprite: l }
