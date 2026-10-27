@@ -4,11 +4,11 @@ import { addTokens, budgetLimit, overBudget, resetBudget, tokensUsed } from './b
 describe('site-wide token budget', () => {
   const saved = { ...process.env }
   beforeEach(() => {
-    resetBudget()
     delete process.env.KV_REST_API_URL
     delete process.env.UPSTASH_REDIS_REST_URL
     delete process.env.TOKEN_BUDGET
     delete process.env.VERCEL
+    resetBudget()
   })
   afterEach(() => {
     process.env = { ...saved }

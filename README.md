@@ -53,7 +53,7 @@ On Vercel, set `OPENAI_API_KEY` and `LESSON_SECRET` as environment variables.
 
 ## Test budget
 
-The whole site shares one token budget (`TOKEN_BUDGET`, default 500,000 on Vercel, no limit locally). When it is used up, new questions get a polite "test limit reached" message. To make the count exact across Vercel's servers, connect an Upstash Redis from Vercel Storage (it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`). Without it, each server copy counts on its own and resets when it restarts.
+The whole site shares one token budget (`TOKEN_BUDGET`, default 500,000 on Vercel, no limit locally). When it is used up, new questions get a polite "test limit reached" message. To make the count exact across Vercel's servers, connect an Upstash Redis from Vercel Storage (it sets `KV_REST_API_URL` and `KV_REST_API_TOKEN`). Without it the count lives in memory: fine when running locally, but on Vercel each server copy counts on its own and resets when it restarts, so connect Redis there.
 
 ## Cost
 

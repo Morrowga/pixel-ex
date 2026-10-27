@@ -100276,6 +100276,24 @@ function validateGrid(rows) {
   if (filled > SIZE * SIZE - 8) return "the picture fills the whole square; leave a transparent border";
   return null;
 }
+function repairGrid(rows) {
+  if (!Array.isArray(rows) || rows.some((r) => typeof r !== "string")) return null;
+  if (rows.length < SIZE - 2 || rows.length > SIZE + 2) return null;
+  const fixRow = (raw2) => {
+    let row = [...raw2].map((c) => c in PALETTE || c === "." ? c : c.toUpperCase() in PALETTE ? c.toUpperCase() : ".").join("");
+    if (Math.abs(row.length - SIZE) > 2) return null;
+    while (row.length > SIZE) row = row.startsWith(".") ? row.slice(1) : row.endsWith(".") ? row.slice(0, -1) : row.slice(0, SIZE);
+    while (row.length < SIZE) row = row.length % 2 ? row + "." : "." + row;
+    return row;
+  };
+  const fixed = rows.map(fixRow);
+  if (fixed.some((r) => r === null)) return null;
+  let out = fixed;
+  const blank = ".".repeat(SIZE);
+  while (out.length > SIZE) out = out[out.length - 1] === blank ? out.slice(0, -1) : out[0] === blank ? out.slice(1) : out.slice(0, SIZE);
+  while (out.length < SIZE) out = out.length % 2 ? [...out, blank] : [blank, ...out];
+  return validateGrid(out) ? null : out;
+}
 
 // src/engine/examples.ts
 var num = (n3) => ({ num: n3, ref: null });
@@ -100992,7 +101010,15 @@ async function withModel(run) {
     throw e2;
   }
 }
-async function planLesson(question, lang = "en", problems = []) {
+var defaultEffort = () => {
+  const v = process.env.LLM_REASONING;
+  return v === "none" || v === "low" || v === "medium" || v === "high" ? v : void 0;
+};
+var spriteEffort = () => {
+  const v = process.env.LLM_SPRITE_REASONING;
+  return v === "none" || v === "low" || v === "medium" || v === "high" ? v : void 0;
+};
+async function planLesson(question, lang = "en", problems = [], effort = defaultEffort()) {
   const client = new OpenAI();
   const user = problems.length === 0 ? question : `${question}
 
@@ -101008,13 +101034,14 @@ Your previous plan was rejected by the checker. Fix these problems and return a 
         ...LANGUAGE_RULES[lang] ? [{ role: "system", content: LANGUAGE_RULES[lang] }] : [],
         { role: "user", content: user }
       ],
-      response_format: zodResponseFormat(PlanSchema, "lesson_plan")
+      response_format: zodResponseFormat(PlanSchema, "lesson_plan"),
+      ...effort ? { reasoning_effort: effort } : {}
     })
   );
   recordUsage("plan", completion.usage);
   const u = completion.usage;
   log3(
-    `  \u2190 OpenAI replied in ${((Date.now() - started) / 1e3).toFixed(1)}s` + (u ? ` | tokens in ${u.prompt_tokens}, out ${u.completion_tokens}` : "")
+    `  \u2190 OpenAI replied in ${((Date.now() - started) / 1e3).toFixed(1)}s` + (u ? ` | tokens in ${u.prompt_tokens}, out ${u.completion_tokens}${u.completion_tokens_details?.reasoning_tokens ? ` (thinking ${u.completion_tokens_details.reasoning_tokens})` : ""}` : "")
   );
   const parsed = completion.choices[0]?.message.parsed;
   if (logPlans) log3("  raw plan:", JSON.stringify(parsed, null, 2));
@@ -101071,7 +101098,7 @@ How to draw well:
 
 Examples:
 ${["car", "house", "apple"].map(show).join("\n\n")}`;
-async function generateSprite(subject) {
+async function generateSprite(subject, effort = spriteEffort()) {
   const client = new OpenAI();
   let problem = "";
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -101084,7 +101111,8 @@ async function generateSprite(subject) {
             { role: "system", content: SPRITE_SYSTEM },
             { role: "user", content: `Draw: ${subject}.${problem ? ` Your last try was rejected: ${problem}. Fix it.` : ""}` }
           ],
-          response_format: zodResponseFormat(SpriteSchema, "sprite")
+          response_format: zodResponseFormat(SpriteSchema, "sprite"),
+          ...effort ? { reasoning_effort: effort } : {}
         })
       );
       const u = completion.usage;
@@ -101093,6 +101121,11 @@ async function generateSprite(subject) {
       const rows = completion.choices[0]?.message.parsed?.rows;
       const bad = validateGrid(rows);
       if (!bad && rows) return rows;
+      const repaired = repairGrid(rows);
+      if (repaired) {
+        log3(`  \u2714 sprite "${subject}" was slightly off (${bad}); fixed without redrawing`);
+        return repaired;
+      }
       problem = bad ?? "no rows returned";
       log3(`  \u2716 sprite "${subject}" rejected: ${problem}`);
     } catch (e2) {

@@ -6,8 +6,8 @@ import { log } from './log'
  *
  * The running total has to live somewhere all the server copies can see. If an Upstash Redis (Vercel "KV") is
  * connected (KV_REST_API_URL + KV_REST_API_TOKEN), the total lives there and the limit is shared and exact.
- * Without it the total lives in memory, which is per server copy and resets when it restarts: fine locally,
- * only a rough guard on Vercel.
+ * Without it the total lives in memory, which is per server copy and resets when it restarts: fine for
+ * running locally, only a rough guard on Vercel.
  */
 const KEY = 'qe:tokens'
 let memory = 0
@@ -55,6 +55,7 @@ export async function addTokens(n: number): Promise<void> {
   await call(`incrby/${KEY}/${Math.round(n)}`)
 }
 
+/** Starts this server's own count again from zero. */
 export const resetBudget = () => {
   memory = 0
 }

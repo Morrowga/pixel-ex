@@ -3,7 +3,7 @@ import { zodResponseFormat } from 'openai/helpers/zod'
 import { z } from 'zod'
 import { PlanSchema, type Plan } from '../src/engine/plan'
 import { PALETTE, PALETTE_KEYS } from '../src/sprites/palette'
-import { validateGrid } from '../src/sprites/grid'
+import { repairGrid, validateGrid } from '../src/sprites/grid'
 import { SPRITES } from '../src/sprites/library'
 import { LANGUAGE_RULES, SYSTEM } from './prompt'
 import { LANG_FOR_PROMPT, type Lang } from '../src/i18n/lang'
@@ -48,7 +48,20 @@ export async function withModel<T>(run: (model: string) => Promise<T>): Promise<
  * The only place that knows about the LLM provider.
  * To switch providers, rewrite the bodies of these two functions.
  */
-export async function planLesson(question: string, lang: Lang = 'en', problems: string[] = []): Promise<Plan> {
+export type Effort = 'none' | 'low' | 'medium' | 'high'
+/** How hard the model thinks before writing the plan. Unset means the model's own default. */
+const defaultEffort = (): Effort | undefined => {
+  const v = process.env.LLM_REASONING
+  return v === 'none' || v === 'low' || v === 'medium' || v === 'high' ? v : undefined
+}
+
+/** Thinking effort for drawing a sprite. Unset means the model's own default. */
+const spriteEffort = (): Effort | undefined => {
+  const v = process.env.LLM_SPRITE_REASONING
+  return v === 'none' || v === 'low' || v === 'medium' || v === 'high' ? v : undefined
+}
+
+export async function planLesson(question: string, lang: Lang = 'en', problems: string[] = [], effort: Effort | undefined = defaultEffort()): Promise<Plan> {
   const client = new OpenAI() // reads OPENAI_API_KEY
   const user =
     problems.length === 0
@@ -66,13 +79,14 @@ export async function planLesson(question: string, lang: Lang = 'en', problems: 
         { role: 'user', content: user },
       ],
       response_format: zodResponseFormat(PlanSchema, 'lesson_plan'),
+      ...(effort ? { reasoning_effort: effort } : {}),
     }),
   )
   recordUsage('plan', completion.usage)
   const u = completion.usage
   log(
     `  ← OpenAI replied in ${((Date.now() - started) / 1000).toFixed(1)}s` +
-      (u ? ` | tokens in ${u.prompt_tokens}, out ${u.completion_tokens}` : ''),
+      (u ? ` | tokens in ${u.prompt_tokens}, out ${u.completion_tokens}${u.completion_tokens_details?.reasoning_tokens ? ` (thinking ${u.completion_tokens_details.reasoning_tokens})` : ''}` : ''),
   )
   const parsed = completion.choices[0]?.message.parsed
   if (logPlans) log('  raw plan:', JSON.stringify(parsed, null, 2))
@@ -135,7 +149,7 @@ Examples:
 ${['car', 'house', 'apple'].map(show).join('\n\n')}`
 
 /** Draws a missing sprite. Checked in code; one retry with the problem. Null when it cannot. */
-export async function generateSprite(subject: string): Promise<string[] | null> {
+export async function generateSprite(subject: string, effort: Effort | undefined = spriteEffort()): Promise<string[] | null> {
   const client = new OpenAI()
   let problem = ''
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -149,6 +163,7 @@ export async function generateSprite(subject: string): Promise<string[] | null> 
           { role: 'user', content: `Draw: ${subject}.${problem ? ` Your last try was rejected: ${problem}. Fix it.` : ''}` },
         ],
         response_format: zodResponseFormat(SpriteSchema, 'sprite'),
+        ...(effort ? { reasoning_effort: effort } : {}),
       }),
       )
       const u = completion.usage
@@ -157,6 +172,12 @@ export async function generateSprite(subject: string): Promise<string[] | null> 
       const rows = completion.choices[0]?.message.parsed?.rows
       const bad = validateGrid(rows)
       if (!bad && rows) return rows
+      // a drawing that is only a character or two off is fixed here instead of being drawn again
+      const repaired = repairGrid(rows)
+      if (repaired) {
+        log(`  ✔ sprite "${subject}" was slightly off (${bad}); fixed without redrawing`)
+        return repaired
+      }
       problem = bad ?? 'no rows returned'
       log(`  ✖ sprite "${subject}" rejected: ${problem}`)
     } catch (e) {
