@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import app from './app'
 import { addTokens, budgetLimit, overBudget, resetBudget, tokensUsed } from './budget'
 
 describe('site-wide token budget', () => {
@@ -33,5 +34,30 @@ describe('site-wide token budget', () => {
     expect(await overBudget()).toBe(false)
     await addTokens(100)
     expect(await overBudget()).toBe(true)
+  })
+
+  it('when the budget is used up, a lesson request gets a friendly message in the learner\'s language, not an error page', async () => {
+    process.env.TOKEN_BUDGET = '100'
+    await addTokens(100)
+    for (const [lang, word] of [['en', 'limit'], ['ja', '上限'], ['my', 'ကန့်သတ်ချက်']] as const) {
+      for (const accept of ['application/json', 'application/x-ndjson']) {
+        const res = await app.request('/api/lesson', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: accept },
+          body: JSON.stringify({ question: 'what is a cat', lang }),
+        })
+        expect(res.status).toBe(503)
+        expect(res.headers.get('content-type')).toMatch(/application\/json/)
+        const body = (await res.json()) as { error: string }
+        expect(body.error).toContain(word)
+      }
+    }
+  })
+
+  it('answers to a lesson already made are still checked when the budget is used up', async () => {
+    process.env.TOKEN_BUDGET = '100'
+    await addTokens(100)
+    const res = await app.request('/api/check', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lessonId: 'not-a-real-token', answer: '7', lang: 'en' }) })
+    expect(res.status).not.toBe(503)
   })
 })

@@ -58,3 +58,7 @@ The whole site shares one token budget (`TOKEN_BUDGET`, default 500,000 on Verce
 ## Cost
 
 A typical lesson costs a few tenths of a cent to about a cent, depending on retries and new sprites. Each question's cost is printed in the terminal.
+
+## License
+
+MIT License. Copyright (c) 2026 THIHA AUNG. See [LICENSE](LICENSE).
